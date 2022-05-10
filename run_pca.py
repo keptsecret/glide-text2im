@@ -163,7 +163,7 @@ for vec_idx in range(sketch_tokens['xf_out'].shape[-1]):
 def pca(X : th.Tensor):
     X = X - X.mean()
     Z = X / X.std()
-    Z = th.dot(Z.T, Z)
+    Z = th.matmul(Z.T, Z)
     L, V = th.linalg.eig(Z)
     return L, V
 
