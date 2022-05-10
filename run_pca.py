@@ -168,7 +168,7 @@ def pca(X : th.Tensor):
     return L, V
 
 # use NxN eigenvectors as mask, correlates to how much to scale/perturb each input dimension by -- scales correlated inputs along with it
-outputs = th.Tensor(outputs).flatten(start_dim=1)
+outputs = th.stack(outputs).flatten(start_dim=1)
 th.save(outputs, "brownie_outputs.pt")
 L, V = pca(outputs)
 print(V.shape)
