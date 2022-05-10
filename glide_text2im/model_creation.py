@@ -1,5 +1,6 @@
 from glide_text2im.gaussian_diffusion import get_named_beta_schedule
 from glide_text2im.respace import SpacedDiffusion, space_timesteps
+from glide_text2im.sketch2im_model import ModifiedText2ImUNet, ModSuperResText2ImUNet
 from glide_text2im.text2im_model import (
     InpaintText2ImUNet,
     SuperResInpaintText2ImUnet,
@@ -153,9 +154,12 @@ def create_model(
     elif inpaint:
         model_cls = InpaintText2ImUNet
     elif super_res:
-        model_cls = SuperResText2ImUNet
+        # model_cls = SuperResText2ImUNet
+        model_cls = ModSuperResText2ImUNet
+    # else:
+    #     model_cls = Text2ImUNet
     else:
-        model_cls = Text2ImUNet
+        model_cls = ModifiedText2ImUNet
     return model_cls(
         text_ctx=text_ctx,
         xf_width=xf_width,

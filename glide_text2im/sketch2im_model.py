@@ -5,11 +5,11 @@ import torch.nn.functional as F
 from .nn import timestep_embedding
 from .unet import UNetModel
 from .xf import LayerNorm, Transformer, convert_module_to_f16
+from .image_encoder import SketchEncoder
 
-
-class Text2ImUNet(UNetModel):
+class ModifiedText2ImUNet(UNetModel):
     """
-    A UNetModel that conditions on text with an encoding transformer.
+    A UNetModel that conditions on sketches, modified from GLIDE
 
     Expects an extra kwarg `tokens` of text.
 
@@ -117,6 +117,25 @@ class Text2ImUNet(UNetModel):
 
         return outputs
 
+    def get_sketch_emb(self, xf_out, up=False):
+        if not up:
+            uncond_tokens, uncond_mask = self.tokenizer.padded_tokens_and_mask([], self.text_ctx)
+            outs = self.get_text_emb(th.tensor(uncond_tokens, device='cuda'), th.tensor(uncond_mask, device='cuda'))
+            u_xf_out = outs['xf_out']
+
+        # added scaling inline with training
+        # xf_out = xf_out.to(th.float16).permute(0, 2, 1) * (8.0+5.1) - 5.1
+        
+        # no scaling
+        xf_out = xf_out.to(th.float16).permute(0, 2, 1)
+        if not up:
+            xf_out = th.cat([xf_out, u_xf_out.permute(0, 2, 1)], dim=0)
+        xf_proj = self.transformer_proj(xf_out[:, -1])
+        xf_out = xf_out.permute(0, 2, 1)
+
+        outputs = dict(xf_proj=xf_proj, xf_out=xf_out)
+        return outputs
+
     def del_cache(self):
         self.cache = None
 
@@ -124,7 +143,7 @@ class Text2ImUNet(UNetModel):
         hs = []
         emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
         if self.xf_width:
-            # text_outputs = self.get_text_emb(tokens, mask)        # original line
+            # text_outputs = self.get_text_emb(tokens, mask)
             text_outputs = tokens
             xf_proj, xf_out = text_outputs["xf_proj"], text_outputs["xf_out"]
             emb = emb + xf_proj.to(emb)
@@ -142,8 +161,7 @@ class Text2ImUNet(UNetModel):
         h = self.out(h)
         return h
 
-
-class SuperResText2ImUNet(Text2ImUNet):
+class ModSuperResText2ImUNet(ModifiedText2ImUNet):
     """
     A text2im model that performs super-resolution.
     Expects an extra kwarg `low_res` to condition on a low-resolution image.
@@ -166,69 +184,3 @@ class SuperResText2ImUNet(Text2ImUNet):
         )
         x = th.cat([x, upsampled], dim=1)
         return super().forward(x, timesteps, **kwargs)
-
-
-class InpaintText2ImUNet(Text2ImUNet):
-    """
-    A text2im model which can perform inpainting.
-    """
-
-    def __init__(self, *args, **kwargs):
-        if "in_channels" in kwargs:
-            kwargs = dict(kwargs)
-            kwargs["in_channels"] = kwargs["in_channels"] * 2 + 1
-        else:
-            # Curse you, Python. Or really, just curse positional arguments :|.
-            args = list(args)
-            args[1] = args[1] * 2 + 1
-        super().__init__(*args, **kwargs)
-
-    def forward(self, x, timesteps, inpaint_image=None, inpaint_mask=None, **kwargs):
-        if inpaint_image is None:
-            inpaint_image = th.zeros_like(x)
-        if inpaint_mask is None:
-            inpaint_mask = th.zeros_like(x[:, :1])
-        return super().forward(
-            th.cat([x, inpaint_image * inpaint_mask, inpaint_mask], dim=1),
-            timesteps,
-            **kwargs,
-        )
-
-
-class SuperResInpaintText2ImUnet(Text2ImUNet):
-    """
-    A text2im model which can perform both upsampling and inpainting.
-    """
-
-    def __init__(self, *args, **kwargs):
-        if "in_channels" in kwargs:
-            kwargs = dict(kwargs)
-            kwargs["in_channels"] = kwargs["in_channels"] * 3 + 1
-        else:
-            # Curse you, Python. Or really, just curse positional arguments :|.
-            args = list(args)
-            args[1] = args[1] * 3 + 1
-        super().__init__(*args, **kwargs)
-
-    def forward(
-        self,
-        x,
-        timesteps,
-        inpaint_image=None,
-        inpaint_mask=None,
-        low_res=None,
-        **kwargs,
-    ):
-        if inpaint_image is None:
-            inpaint_image = th.zeros_like(x)
-        if inpaint_mask is None:
-            inpaint_mask = th.zeros_like(x[:, :1])
-        _, _, new_height, new_width = x.shape
-        upsampled = F.interpolate(
-            low_res, (new_height, new_width), mode="bilinear", align_corners=False
-        )
-        return super().forward(
-            th.cat([x, inpaint_image * inpaint_mask, inpaint_mask, upsampled], dim=1),
-            timesteps,
-            **kwargs,
-        )
