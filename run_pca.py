@@ -128,7 +128,7 @@ def model_fn(x_t, ts, **kwargs):
 
 # loop through and perturb each vector individually
 outputs = []
-for vec_idx in sketch_tokens['xf_out'].shape[-1]:
+for vec_idx in range(sketch_tokens['xf_out'].shape[-1]):
     out_mask = th.zeros_like(sketch_tokens['xf_out'])
     out_mask[0, :, vec_idx] += 1
     loss = pdist(sketch_tokens['xf_out'][0], text_outputs['xf_out'][0])
