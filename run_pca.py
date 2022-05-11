@@ -11,7 +11,8 @@ from glide_text2im.model_creation import (
 )
 from glide_text2im.image_encoder import SketchEncoder, VQSketchEncoder
 
-th.manual_seed(0)
+SEED = 0
+th.manual_seed(SEED)
 
 # stuff for vq encoder ONLY
 embed_dim = 256
@@ -129,7 +130,7 @@ def model_fn(x_t, ts, **kwargs):
 # loop through and perturb each vector individually
 outputs = []
 for vec_idx in range(sketch_tokens['xf_out'].shape[-1]):
-    th.manual_seed(0)
+    th.manual_seed(SEED)
 
     out_mask = th.zeros_like(sketch_tokens['xf_out'])
     out_mask[0, :, vec_idx] += 1
