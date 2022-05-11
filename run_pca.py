@@ -129,6 +129,8 @@ def model_fn(x_t, ts, **kwargs):
 # loop through and perturb each vector individually
 outputs = []
 for vec_idx in range(sketch_tokens['xf_out'].shape[-1]):
+    th.manual_seed(0)
+
     out_mask = th.zeros_like(sketch_tokens['xf_out'])
     out_mask[0, :, vec_idx] += 1
     loss = pdist(sketch_tokens['xf_out'][0], text_outputs['xf_out'][0])
@@ -160,16 +162,10 @@ for vec_idx in range(sketch_tokens['xf_out'].shape[-1]):
     model.del_cache()
     outputs.append(samples[0])
 
-def pca(X : th.Tensor):
-    X = X - X.mean()
-    Z = X / X.std()
-    Z = th.matmul(Z.T, Z)
-    L, V = th.linalg.eig(Z)
-    return L, V
-
 # use NxN eigenvectors as mask, correlates to how much to scale/perturb each input dimension by -- scales correlated inputs along with it
 outputs = th.stack(outputs).flatten(start_dim=1)
+outputs = ((outputs+1) * 127.5).round().clamp(0, 255).permute(1,0).to(th.float32)
 th.save(outputs, "brownie_outputs.pt")
-L, V = pca(outputs)
+U, S, V = th.pca_lowrank(outputs, q=outputs.shape[-1])
 print(V.shape)
 th.save(V, "brownie_pca.pt")
