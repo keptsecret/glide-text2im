@@ -113,12 +113,6 @@ def model_fn(x_t, ts, **kwargs):
     eps = th.cat([half_eps, half_eps], dim=0)
     return th.cat([eps, rest], dim=1)
 
-# for running on sketch
-# model_kwargs = dict(
-#     tokens=sketch_tokens,
-#     mask=None
-# )
-
 # ------------------------------
 # for testing perturbations
 tokens = model.tokenizer.encode(prompt)
@@ -138,11 +132,24 @@ mask = th.tensor([mask] * batch_size + [uncond_mask] * batch_size, dtype=th.bool
 # alpha represents target loss over batch of 32
 alpha = 0.1
 text_outputs = model.get_text_emb(tokens, mask)
-# print(text_outputs['xf_out'].shape)
+
+# tokens for upsampling
+sketch_tokens_up = model.get_sketch_emb(sketch_out.to(device), up=True)
+
+tokens = model_up.tokenizer.encode(prompt)
+tokens, mask = model_up.tokenizer.padded_tokens_and_mask(
+    tokens, options_up['text_ctx']
+)
+
+tokens = th.tensor([tokens] * batch_size, device=device)
+mask = th.tensor([mask] * batch_size, dtype=th.bool, device=device)
+text_outputs_up = model.get_text_emb(tokens, mask)
+
 pdist = th.nn.MSELoss()
 
 for i in range(sketch_tokens['xf_out'].shape[-1]):
     th.manual_seed(SEED)
+    th.cuda.manual_seed(SEED)
 
     zeros_mask = th.zeros_like(sketch_tokens['xf_out'][0])
     loss = pdist(sketch_tokens['xf_out'][0], text_outputs['xf_out'][0])
@@ -182,40 +189,19 @@ for i in range(sketch_tokens['xf_out'].shape[-1]):
     ##############################
 
     # --------------------------------------------
-    sketch_tokens = model.get_sketch_emb(sketch_out.to(device), up=True)
 
-    tokens = model_up.tokenizer.encode(prompt)
-    tokens, mask = model_up.tokenizer.padded_tokens_and_mask(
-        tokens, options_up['text_ctx']
-    )
-
-    tokens = th.tensor([tokens] * batch_size, device=device)
-    mask = th.tensor([mask] * batch_size, dtype=th.bool, device=device)
-
-    text_outputs = model.get_text_emb(tokens, mask)
-
-    loss = pdist(sketch_tokens['xf_out'][0], text_outputs['xf_out'][0])
+    loss = pdist(sketch_tokens_up['xf_out'][0], text_outputs_up['xf_out'][0])
     scale_out = loss.item()
-    dir_out = pc[0].unsqueeze(0).repeat(512, 1)
+    dir_out = pc[i].unsqueeze(0).repeat(512, 1)
     dir_out = th.cat((dir_out.unsqueeze(0), zeros_mask.unsqueeze(0)), 0).to(th.float16)
-    xf_out = text_outputs['xf_out'] + dir_out / scale_out * alpha
+    xf_out = text_outputs_up['xf_out'] + dir_out / scale_out * alpha
 
-    loss = pdist(sketch_tokens['xf_proj'][0], text_outputs['xf_proj'][0])
+    loss = pdist(sketch_tokens_up['xf_proj'][0], text_outputs_up['xf_proj'][0])
     scale_proj = loss.item()
-    dir_proj = sketch_tokens['xf_proj'] - text_outputs['xf_proj']
-    xf_proj = text_outputs['xf_proj'] + dir_proj / scale_proj * alpha
+    dir_proj = sketch_tokens_up['xf_proj'] - text_outputs_up['xf_proj']
+    xf_proj = text_outputs_up['xf_proj'] + dir_proj / scale_proj * alpha
 
     # --------------------------------------------------
-
-    # Create the model conditioning dict.
-    # model_kwargs = dict(
-    #     # Low-res image to upsample.
-    #     low_res=((samples+1)*127.5).round()/127.5 - 1,
-
-    #     # Text tokens
-    #     tokens=sketch_tokens,
-    #     mask=None,
-    # )
 
     # for testing perturbations
     model_kwargs = dict(
