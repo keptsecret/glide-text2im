@@ -3,7 +3,6 @@ Script for sampling images on perturbations based on PC
 """
 
 from PIL import Image
-from IPython.display import display
 import torch as th
 from torchvision import transforms
 
