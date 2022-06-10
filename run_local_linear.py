@@ -9,10 +9,11 @@ delta_y : th.Tensor = perturb_y - true_y
 
 A = th.rand([3*64*64, 512*128], requires_grad=True, device=device)
 criterion = th.nn.MSELoss()
-optimizer = th.optim.Adam([A], lr=1e-3)
+optimizer = th.optim.Adam([A], lr=1e-2)
 
 EPOCHS = 10
 for epoch in range(EPOCHS):
+    running_loss = 0
     for i in range(delta_x.shape[0]):
         x = delta_x[i]
         x = x[None, :].repeat(512, 1).flatten().to(device=device)
@@ -27,6 +28,6 @@ for epoch in range(EPOCHS):
         loss = criterion(y_pred, y_real)
         loss.backward()
         optimizer.step()
-        
-        print(f'[{epoch + 1}, {i + 1:5d}] loss: {loss.item() / 3:.5f}')
-        
+        running_loss += loss.item()
+
+    print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 128:.5f}')
