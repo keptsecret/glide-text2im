@@ -70,7 +70,7 @@ def show_images(batch: th.Tensor, filename):
     im.save(filename)
 
 # set up image
-im = Image.open("./000000000092.png")
+im = Image.open("./000000000247.png")
 img = transforms.ToTensor()(im)
 img = img.reshape(img.shape[1:])
 max_side = max(img.shape)
@@ -89,8 +89,9 @@ sketch_encoder.load_state_dict(th.load("./sketch_encoder_weights_vq_f100mse_noh.
 sketch_out, _, _ = sketch_encoder(img_batch)
 sketch_tokens = model.get_sketch_emb(sketch_out.to(device))
 
-prompt = "A white plate with a brownie and white frosting"
+# prompt = "A white plate with a brownie and white frosting"
 # prompt = "A zebra grazing on lush green grass in a field."
+prompt = "a small airplane that is on a runway"
 batch_size = 1
 guidance_scale = 3.0
 full_batch_size = batch_size * 2
@@ -100,7 +101,7 @@ full_batch_size = batch_size * 2
 upsample_temp = 0.997
 
 # TODO: mark for principal components
-pc = th.load("brownie_pca_1e-1_s0.pt")
+pc = th.load("airplane_pca.pt")
 
 # Create a classifier-free guidance sampling function
 def model_fn(x_t, ts, **kwargs):
@@ -131,22 +132,26 @@ mask = th.tensor([mask] * batch_size + [uncond_mask] * batch_size, dtype=th.bool
 
 # alpha represents target loss over batch of 32
 alpha = 0.1
+upsample = False
 text_outputs = model.get_text_emb(tokens, mask)
 
 # tokens for upsampling
-sketch_tokens_up = model.get_sketch_emb(sketch_out.to(device), up=True)
+if upsample:
+    sketch_tokens_up = model.get_sketch_emb(sketch_out.to(device), up=True)
 
-tokens = model_up.tokenizer.encode(prompt)
-tokens, mask = model_up.tokenizer.padded_tokens_and_mask(
-    tokens, options_up['text_ctx']
-)
+    tokens = model_up.tokenizer.encode(prompt)
+    tokens, mask = model_up.tokenizer.padded_tokens_and_mask(
+        tokens, options_up['text_ctx']
+    )
 
-tokens = th.tensor([tokens] * batch_size, device=device)
-mask = th.tensor([mask] * batch_size, dtype=th.bool, device=device)
-text_outputs_up = model.get_text_emb(tokens, mask)
+    tokens = th.tensor([tokens] * batch_size, device=device)
+    mask = th.tensor([mask] * batch_size, dtype=th.bool, device=device)
+    text_outputs_up = model.get_text_emb(tokens, mask)
 
 pdist = th.nn.MSELoss()
+downsample = transforms.Resize(size=[32, 32])
 
+outputs = []
 for i in range(sketch_tokens['xf_out'].shape[-1]):
     th.manual_seed(SEED)
     th.cuda.manual_seed(SEED)
@@ -184,49 +189,57 @@ for i in range(sketch_tokens['xf_out'].shape[-1]):
     # Show the output
     # show_images(samples[0], "lowres.png")
 
-    ##############################
-    # Upsample the 64x64 samples #
-    ##############################
+    if upsample:
+        ##############################
+        # Upsample the 64x64 samples #
+        ##############################
 
-    # --------------------------------------------
+        # --------------------------------------------
 
-    loss = pdist(sketch_tokens_up['xf_out'][0], text_outputs_up['xf_out'][0])
-    scale_out = loss.item()
-    dir_out = pc[i].unsqueeze(0).repeat(512, 1)
-    dir_out = th.cat((dir_out.unsqueeze(0), zeros_mask.unsqueeze(0)), 0).to(th.float16)
-    xf_out = text_outputs_up['xf_out'] + dir_out / scale_out * alpha
+        loss = pdist(sketch_tokens_up['xf_out'][0], text_outputs_up['xf_out'][0])
+        scale_out = loss.item()
+        dir_out = pc[i].unsqueeze(0).repeat(512, 1)
+        dir_out = th.cat((dir_out.unsqueeze(0), zeros_mask.unsqueeze(0)), 0).to(th.float16)
+        xf_out = text_outputs_up['xf_out'] + dir_out / scale_out * alpha
 
-    loss = pdist(sketch_tokens_up['xf_proj'][0], text_outputs_up['xf_proj'][0])
-    scale_proj = loss.item()
-    dir_proj = sketch_tokens_up['xf_proj'] - text_outputs_up['xf_proj']
-    xf_proj = text_outputs_up['xf_proj'] + dir_proj / scale_proj * alpha
+        loss = pdist(sketch_tokens_up['xf_proj'][0], text_outputs_up['xf_proj'][0])
+        scale_proj = loss.item()
+        dir_proj = sketch_tokens_up['xf_proj'] - text_outputs_up['xf_proj']
+        xf_proj = text_outputs_up['xf_proj'] + dir_proj / scale_proj * alpha
 
-    # --------------------------------------------------
+        # --------------------------------------------------
 
-    # for testing perturbations
-    model_kwargs = dict(
-        # Low-res image to upsample.
-        low_res=((samples+1)*127.5).round()/127.5 - 1,
+        # for testing perturbations
+        model_kwargs = dict(
+            # Low-res image to upsample.
+            low_res=((samples+1)*127.5).round()/127.5 - 1,
 
-        # Text tokens
-        tokens=dict(xf_proj=xf_proj, xf_out=xf_out),
-        mask=None,
-    )
+            # Text tokens
+            tokens=dict(xf_proj=xf_proj, xf_out=xf_out),
+            mask=None,
+        )
 
-    # Sample from the base model.
-    model_up.del_cache()
-    up_shape = (batch_size, 3, options_up["image_size"], options_up["image_size"])
-    up_samples = diffusion_up.ddim_sample_loop(
-        model_up,
-        up_shape,
-        noise=th.randn(up_shape, device=device) * upsample_temp,
-        device=device,
-        clip_denoised=True,
-        progress=True,
-        model_kwargs=model_kwargs,
-        cond_fn=None,
-    )[:batch_size]
-    model_up.del_cache()
+        # Sample from the base model.
+        model_up.del_cache()
+        up_shape = (batch_size, 3, options_up["image_size"], options_up["image_size"])
+        up_samples = diffusion_up.ddim_sample_loop(
+            model_up,
+            up_shape,
+            noise=th.randn(up_shape, device=device) * upsample_temp,
+            device=device,
+            clip_denoised=True,
+            progress=True,
+            model_kwargs=model_kwargs,
+            cond_fn=None,
+        )[:batch_size]
+        model_up.del_cache()
 
-    # Show the output
-    show_images(up_samples[0], f'images/brownie_s{SEED}_{alpha}_pc{i}.png')
+        # Show the output
+        #show_images(up_samples[0], f'images/brownie_s{SEED}_{alpha}_pc{i}.png')
+
+    outputs.append(downsample(samples[0]))
+
+outputs = th.stack(outputs).flatten(start_dim=1)
+print(outputs.shape)
+# outputs = ((outputs+1) * 127.5).round().clamp(0, 255).permute(1,0).to(th.float32)
+th.save(outputs, "airplane_pca_outputs.pt")

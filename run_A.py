@@ -10,6 +10,7 @@ def show_images(batch: th.Tensor, filename):
     im.save(filename)
 
 device = 'cuda' if th.cuda.is_available() else 'cpu'
+<<<<<<< HEAD
 print(device)
 
 # x = th.load("brownie_pca_1e-1_s0.pt").to(dtype=th.float16, device=device)
@@ -24,6 +25,16 @@ th.save(Vh, 'airplane_Vh.pt')
 print(new_S)
 d = th.dist(A, U @ th.diag(new_S) @ Vh)
 print(d)
+=======
+
+# x = th.load("brownie_pca_1e-1_s0.pt").to(dtype=th.float16, device=device)
+#x = th.load("brownie_in_s0.pt")
+A = th.load("brownie_A.pt", map_location=th.device('cpu'))
+U, S, Vh = th.linalg.svd(A)
+print(U.shape)
+print(S.shape)
+print(Vh.shape)
+>>>>>>> 373f08c259a7507bd44e5c0bf9e20e339439b648
 # true_y = th.load("brownie_true_output.pt")
 
 # x = x[1]
@@ -32,4 +43,8 @@ print(d)
 # y = th.matmul(A, x).view(size=[3, 32, 32])
 # combined_y = true_y + y
 
+<<<<<<< HEAD
 # show_images(combined_y, "test_image2.png")
+=======
+# show_images(combined_y, "test_image2.png")
+>>>>>>> 373f08c259a7507bd44e5c0bf9e20e339439b648
