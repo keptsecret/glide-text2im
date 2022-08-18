@@ -70,20 +70,6 @@ def show_images(batch: th.Tensor, filename):
     im = transforms.ToPILImage()(scaled)
     im.save(filename)
 
-# set up image
-im = Image.open("./000000000092.png")
-img = transforms.ToTensor()(im)
-img = img.reshape(img.shape[1:])
-max_side = max(img.shape)
-pad_left, pad_top = max_side-img.shape[1], max_side-img.shape[0]
-padding = (pad_left//2, pad_top//2, pad_left//2+pad_left%2, pad_top//2+pad_top%2)
-img = transforms.Pad(padding, fill=1)(img)
-img = img.unsqueeze(0)
-img = transforms.Resize(256)(img)
-img = img.repeat(3, 1, 1).to(device=device)
-
-img_batch = img.unsqueeze(0).cpu()
-
 prompt = "A white plate with a brownie and white frosting"
 # prompt = "A zebra grazing on lush green grass in a field."
 
