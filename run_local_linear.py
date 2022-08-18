@@ -1,3 +1,7 @@
+"""
+Trains a local linearization matrix based on meaningful perturbations of the encoding input
+"""
+
 import torch as th
 
 device = 'cuda' if th.cuda.is_available() else 'cpu'

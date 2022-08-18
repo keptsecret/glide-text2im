@@ -1,3 +1,7 @@
+"""
+Generates principal components of the encoding based on the output images produced by perturbing text encoding by one sketch encoding vector
+"""
+
 from PIL import Image
 import torch as th
 import numpy as np

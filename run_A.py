@@ -1,3 +1,8 @@
+"""
+Performs SVD on a local linearization matrix A and saves the Vh matrix that represents feature perturbations on original encoding
+Note: commented out code runs input x and perturbation dx through A to get output image y
+"""
+
 import torch as th
 from torchvision import transforms
 
