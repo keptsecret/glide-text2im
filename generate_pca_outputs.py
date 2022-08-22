@@ -119,7 +119,7 @@ downsample = transforms.Resize(size=[32, 32])
 with open("prompt_brownie_variations.json", 'r') as f:
     prompt_variations = json.load(f)
 
-for i, p_var in prompt_variations:
+for i, p_var in enumerate(prompt_variations):
     print(p_var)
     var_text_outputs = get_encoding(p_var)
     pc = th.load(f"brownie_variations/brownie_variation{i}_pca.pt")
