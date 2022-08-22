@@ -70,7 +70,7 @@ def show_images(batch: th.Tensor, filename):
     im = transforms.ToPILImage()(scaled)
     im.save(filename)
 
-prompt = "A white plate with a brownie and white frosting"
+prompt = "A plate with a brownie and frosting"
 # prompt = "A zebra grazing on lush green grass in a field."
 
 batch_size = 1
@@ -103,7 +103,7 @@ def get_encoding(prompt : str) :
 orig_text_outputs = get_encoding(prompt)
 
 # alpha represents target loss over batch of 32
-alpha = 1
+alpha = 1.0
 # print(text_outputs['xf_out'].shape)
 pdist = th.nn.MSELoss()
 
@@ -118,9 +118,11 @@ def model_fn(x_t, ts, **kwargs):
     return th.cat([eps, rest], dim=1)
 
 # load prompts and generate pca for each one
-prompt_variations = json.load("prompt_brownie_variations.json")
+with open("prompt_brownie_variations.json", 'r') as f:
+    prompt_variations = json.load(f)
 
 for i, p_var in enumerate(prompt_variations):
+    print(p_var)
     var_text_outputs = get_encoding(p_var)
 
     # loop through and perturb each vector individually
@@ -131,12 +133,13 @@ for i, p_var in enumerate(prompt_variations):
         out_mask = th.zeros_like(var_text_outputs['xf_out'])
         out_mask[0, :, vec_idx] += 1
         loss = pdist(var_text_outputs['xf_out'][0], orig_text_outputs['xf_out'][0])
-        scale_out = loss.item()
+        scale_out = 1.0 #loss.item()
         dir_out = var_text_outputs['xf_out'] - orig_text_outputs['xf_out']
         xf_out = orig_text_outputs['xf_out'] + out_mask * dir_out / scale_out * alpha
+        #print(xf_out - orig_text_outputs['xf_out'])
 
         loss = pdist(var_text_outputs['xf_proj'][0], orig_text_outputs['xf_proj'][0])
-        scale_proj = loss.item()
+        scale_proj = 1.0 #loss.item()
         dir_proj = var_text_outputs['xf_proj'] - orig_text_outputs['xf_proj']
         xf_proj = orig_text_outputs['xf_proj'] + dir_proj / scale_proj * alpha
 
@@ -158,11 +161,12 @@ for i, p_var in enumerate(prompt_variations):
         )[:batch_size]
         model.del_cache()
         outputs.append(samples[0])
+        #print(samples[0])
 
     # use NxN eigenvectors as mask, correlates to how much to scale/perturb each input dimension by -- scales correlated inputs along with it
     outputs = th.stack(outputs).flatten(start_dim=1)
     outputs = ((outputs+1) * 127.5).round().clamp(0, 255).permute(1,0).to(th.float32)
-    #th.save(outputs, "brownie_outputs.pt")
     U, S, V = th.pca_lowrank(outputs, q=outputs.shape[-1])
-    print(V.shape)
+    print(f"{i}: {V.shape}")
     th.save(V, f"brownie_variations/brownie_variation{i}_pca.pt")
+
