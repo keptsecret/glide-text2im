@@ -132,13 +132,13 @@ for i, p_var in enumerate(prompt_variations):
 
         out_mask = th.zeros_like(var_text_outputs['xf_out'])
         out_mask[0, :, vec_idx] += 1
-        loss = pdist(var_text_outputs['xf_out'][0], orig_text_outputs['xf_out'][0])
+        #loss = pdist(var_text_outputs['xf_out'][0], orig_text_outputs['xf_out'][0])
         scale_out = 1.0 #loss.item()
         dir_out = var_text_outputs['xf_out'] - orig_text_outputs['xf_out']
         xf_out = orig_text_outputs['xf_out'] + out_mask * dir_out / scale_out * alpha
         #print(xf_out - orig_text_outputs['xf_out'])
 
-        loss = pdist(var_text_outputs['xf_proj'][0], orig_text_outputs['xf_proj'][0])
+        #loss = pdist(var_text_outputs['xf_proj'][0], orig_text_outputs['xf_proj'][0])
         scale_proj = 1.0 #loss.item()
         dir_proj = var_text_outputs['xf_proj'] - orig_text_outputs['xf_proj']
         xf_proj = orig_text_outputs['xf_proj'] + dir_proj / scale_proj * alpha
