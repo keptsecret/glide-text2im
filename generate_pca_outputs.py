@@ -167,4 +167,5 @@ for i, p_var in enumerate(prompt_variations):
         print(f"Found nan value on iter {i}")
         break
     # outputs = ((outputs+1) * 127.5).round().clamp(0, 255).permute(1,0).to(th.float32)
+    print(f"{i}: {outputs.shape}")
     th.save(outputs, f"brownie_variations_outputs/brownie_variation{i}_pca_output.pt")
