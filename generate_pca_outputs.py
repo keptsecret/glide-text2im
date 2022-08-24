@@ -2,6 +2,7 @@
 Script for sampling images on perturbations based on PC of variational prompt encodings
 """
 
+from cmath import isnan
 import torch as th
 from torchvision import transforms
 import json
@@ -125,14 +126,14 @@ for i, p_var in enumerate(prompt_variations):
     pc = th.load(f"brownie_variations/brownie_variation{i}_pca.pt")
 
     outputs = []
-    for i in range(var_text_outputs['xf_out'].shape[-1]):
+    for idx in range(var_text_outputs['xf_out'].shape[-1]):
         th.manual_seed(SEED)
         th.cuda.manual_seed(SEED)
 
         zeros_mask = th.zeros_like(var_text_outputs['xf_out'][0])
         #loss = pdist(var_text_outputs['xf_out'][0], orig_text_outputs['xf_out'][0])
         scale_out = 1.0
-        dir_out = pc[i].unsqueeze(0).repeat(512, 1)
+        dir_out = pc[idx].unsqueeze(0).repeat(512, 1)
         dir_out = th.cat((dir_out.unsqueeze(0), zeros_mask.unsqueeze(0)), 0).to(th.float16)
         xf_out = var_text_outputs['xf_out'] + dir_out / scale_out * alpha
 
@@ -162,5 +163,8 @@ for i, p_var in enumerate(prompt_variations):
         outputs.append(downsample(samples[0]))
 
     outputs = th.stack(outputs).flatten(start_dim=1)
+    if outputs.isnan().any():
+        print(f"Found nan value on iter {i}")
+        break
     # outputs = ((outputs+1) * 127.5).round().clamp(0, 255).permute(1,0).to(th.float32)
     th.save(outputs, f"brownie_variations_outputs/brownie_variation{i}_pca_output.pt")
