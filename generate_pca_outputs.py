@@ -133,7 +133,7 @@ for i, p_var in enumerate(prompt_variations):
         zeros_mask = th.zeros_like(var_text_outputs['xf_out'][0])
         #loss = pdist(var_text_outputs['xf_out'][0], orig_text_outputs['xf_out'][0])
         scale_out = 1.0
-        dir_out = pc[idx].unsqueeze(0).repeat(512, 1)
+        dir_out = pc[:, idx].unsqueeze(0).repeat(512, 1)
         dir_out = th.cat((dir_out.unsqueeze(0), zeros_mask.unsqueeze(0)), 0).to(th.float16)
         xf_out = var_text_outputs['xf_out'] + dir_out / scale_out * alpha
 

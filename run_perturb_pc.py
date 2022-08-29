@@ -159,7 +159,7 @@ for i in range(sketch_tokens['xf_out'].shape[-1]):
     zeros_mask = th.zeros_like(sketch_tokens['xf_out'][0])
     loss = pdist(sketch_tokens['xf_out'][0], text_outputs['xf_out'][0])
     scale_out = loss.item()
-    dir_out = pc[i].unsqueeze(0).repeat(512, 1)
+    dir_out = pc[:, i].unsqueeze(0).repeat(512, 1)
     dir_out = th.cat((dir_out.unsqueeze(0), zeros_mask.unsqueeze(0)), 0).to(th.float16)
     xf_out = text_outputs['xf_out'] + dir_out / scale_out * alpha
 
