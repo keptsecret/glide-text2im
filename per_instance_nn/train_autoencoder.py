@@ -6,7 +6,8 @@ from pi_features_model import AE
 device = 'cuda' if th.cuda.is_available() else 'cpu'
 autoencoder = AE()
 autoencoder.to(device)
-input_encoding = th.load("../brownie_variations_true_output.pt")
+input_encoding = th.load("../brownie_true_input_[xf_out].pt")
+input_encoding = input_encoding[0]  # remove classifier-free guidance stack
 input_encoding.to(device)
 
 EPOCHS = 10
