@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from pi_features_model import AE
 
-device = 'cuda' if th.cuda_is_available() else 'cpu'
+device = 'cuda' if th.cuda.is_available() else 'cpu'
 autoencoder = AE()
 autoencoder.to(device)
 input_encoding = th.load("../brownie_variations_true_output.pt")
