@@ -1,14 +1,17 @@
 import torch as th
 import torch.nn as nn
 
-from .pi_features_model import AE
+from pi_features_model import AE
 
+device = 'cuda' if th.cuda_is_available() else 'cpu'
 autoencoder = AE()
+autoencoder.to(device)
 input_encoding = th.load("../brownie_variations_true_output.pt")
+input_encoding.to(device)
 
 EPOCHS = 10
 learning_rate = 1e-3
-optimizer = th.optim.Adam(AE.parameters(), lr=learning_rate, weight_decay=1e-6)
+optimizer = th.optim.Adam(autoencoder.parameters(), lr=learning_rate, weight_decay=1e-6)
 criterion = nn.MSELoss()
 
 for epoch in range(EPOCHS):
