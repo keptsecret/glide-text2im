@@ -19,7 +19,7 @@ class Encoder(nn.Module):
                     nn.ReLU()]
 
         self.nn = nn.Sequential(*layers)
-    
+
     def forward(self, input):
         x = th.flatten(input)
         output = self.nn(x)
@@ -31,7 +31,7 @@ class AE(nn.Module):
 
         self.input_shape = [512, 128]
         self.encoder = Encoder()
-        
+
         decode_layers = [nn.Linear(1024, 4000),
                     nn.ReLU(),
                     nn.Linear(4000, 8000),
@@ -40,13 +40,15 @@ class AE(nn.Module):
                     nn.ReLU(),
                     nn.Linear(16000, 32000),
                     nn.ReLU(),
-                    nn.Linear(32000, self.input_shape[0] * self.input_shape[1])]
+                    nn.Linear(32000, self.input_shape[0] * self.input_shape[1]),
+                    nn.Sigmoid()]
 
         self.decoder = nn.Sequential(*decode_layers)
 
     def forward(self, input):
         x = self.encoder(input)
-        output = self.decoder(x)
+        x = self.decoder(x)
+        output = x.view(512, 128)
         return output
 
     def save_encoder_weights(self, filename):
