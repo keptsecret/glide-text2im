@@ -9,9 +9,6 @@ dtype = th.float32
 
 autoencoder = AE()
 autoencoder = autoencoder.to(device, dtype=dtype)
-input_encoding = th.load("../brownie_true_input_[xf_out].pt")
-input_encoding = input_encoding[0]  # remove classifier-free guidance stack
-input_encoding = input_encoding.to(device, dtype=dtype)
 
 EPOCHS = 40
 learning_rate = 1e-4
@@ -22,22 +19,33 @@ criterion = nn.MSELoss()
 th.autograd.set_detect_anomaly(True)
 
 for epoch in range(EPOCHS):
-    optimizer.zero_grad()
+    running_loss = 0.0
 
-    encoding = input_encoding - input_encoding.min(1, keepdim=True)[0]
-    encoding /= encoding.max(1, keepdim=True)[0]
-    encoding = encoding.to(device)
-    output = autoencoder(encoding)
-    #print(encoding)
-    #print(output)
+    for i in range(181):
+        optimizer.zero_grad()
 
-    loss = criterion(output.T, encoding.T)
-    loss.backward()
+        if i == 180:
+            input_encoding = th.load("../brownie_true_input_[xf_out].pt")
+        else:
+            input_encoding = th.load("../brownie_variations/brownie_variation{i}_pca.pt")
+        input_encoding = input_encoding[0]  # remove classifier-free guidance stack
+        input_encoding = input_encoding.to(device, dtype=dtype)
 
-    optimizer.step()
+        encoding = input_encoding - input_encoding.min(1, keepdim=True)[0]
+        encoding /= encoding.max(1, keepdim=True)[0]
+        encoding = encoding.to(device)
+        output = autoencoder(encoding)
+        #print(encoding)
+        #print(output)
+
+        loss = criterion(output.T, encoding.T)
+        loss.backward()
+
+        optimizer.step()
+        running_loss += loss.item()
     scheduler.step()
 
-    print(f'Epoch: {epoch+1} - loss: {loss.item():.5f}')
+    print(f'Epoch: {epoch+1} - loss: {running_loss / 181:.5f}')
 
 autoencoder.save_encoder_weights("pi_encoder_weights.pt")
 print('Training complete')
