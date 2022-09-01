@@ -32,15 +32,15 @@ class AE(nn.Module):
         self.input_shape = [512, 128]
         self.encoder = Encoder()
 
-        decode_layers = [nn.Linear(1024, 4000),
+        decode_layers = [nn.Linear(1024, 4000, bias=False),
                     nn.ReLU(),
-                    nn.Linear(4000, 8000),
+                    nn.Linear(4000, 8000, bias=False),
                     nn.ReLU(),
-                    nn.Linear(8000, 16000),
+                    nn.Linear(8000, 16000, bias=False),
                     nn.ReLU(),
-                    nn.Linear(16000, 32000),
+                    nn.Linear(16000, 32000, bias=False),
                     nn.ReLU(),
-                    nn.Linear(32000, self.input_shape[0] * self.input_shape[1]),
+                    nn.Linear(32000, self.input_shape[0] * self.input_shape[1], bias=False),
                     nn.Sigmoid()]
 
         self.decoder = nn.Sequential(*decode_layers)
