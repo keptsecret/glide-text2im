@@ -21,7 +21,11 @@ class Encoder(nn.Module):
         self.nn = nn.Sequential(*layers)
 
     def forward(self, input):
-        x = th.flatten(input)
+        start_dim = 1
+        if len(input.shape) == 2:
+            start_dim = 0
+
+        x = th.flatten(input, start_dim=start_dim)
         output = self.nn(x)
         return output
 
@@ -58,7 +62,7 @@ class PerInstanceLinearizer(nn.Module):
     def __init__(self) -> None:
         super(PerInstanceLinearizer, self).__init__()
 
-        self.encoder = Encoder()
+        self.encoder = Encoder().to('cuda:0')
         for param in self.encoder.parameters():
             param.requires_grad = False
 
@@ -72,12 +76,13 @@ class PerInstanceLinearizer(nn.Module):
                     nn.ReLU(),
                     nn.Linear(2048, 3072, bias=False)]
 
-        self.generator = nn.Sequential(*generate_layers)
+        self.generator = nn.Sequential(*generate_layers).to('cuda:1')
 
-    def forward(self, input):
+    def forward(self, input, reshape_output=True):
         encoding = self.encoder(input)
-        x = self.generator(encoding)
-        output = x.view(3, 32, 32)
+        output = self.generator(encoding.to('cuda:1'))
+        if reshape_output:
+            output = output.view(3, 32, 32)
         return output
 
     def load_encoder_weights(self, filename):
