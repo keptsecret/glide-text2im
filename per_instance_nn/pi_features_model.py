@@ -66,23 +66,39 @@ class PerInstanceLinearizer(nn.Module):
         for param in self.encoder.parameters():
             param.requires_grad = False
 
-        generate_layers = [nn.Linear(1024, 512),
-                    nn.ReLU(),
-                    nn.Linear(512, 512),
-                    nn.ReLU(),
-                    nn.Linear(512, 1024, bias=False),
-                    nn.ReLU(),
-                    nn.Linear(1024, 2048, bias=False),
-                    nn.ReLU(),
-                    nn.Linear(2048, 3072, bias=False)]
+        # generate_layers = [nn.Linear(1024, 512),
+        #             nn.ReLU(),
+        #             nn.Linear(512, 512),
+        #             nn.ReLU(),
+        #             nn.Linear(512, 1024, bias=False),
+        #             nn.ReLU(),
+        #             nn.Linear(1024, 2048, bias=False),
+        #             nn.ReLU(),
+        #             nn.Linear(2048, 3072, bias=False)]
 
-        self.generator = nn.Sequential(*generate_layers).to('cuda:1')
+        generate_layers = [nn.Linear(1024, 4096, bias=False),
+                    nn.ReLU(),
+                    nn.Linear(4096, 16000, bias=False),
+                    nn.ReLU(),
+                    nn.Linear(16000, 64000, bias=False),
+                    nn.ReLU(),
+                    nn.Linear(64000, 128000, bias=False),
+                    nn.ReLU(),
+                    nn.Linear(128000, 512000, bias=False),
+                    nn.ReLU(),
+                    nn.Linear(512000, 1024000, bias=False),
+                    nn.ReLU(),
+                    nn.Linear(1024000, 3145728, bias=False)]
 
-    def forward(self, input, reshape_output=True):
+        self.generator = nn.Sequential(*generate_layers).to('cpu')
+
+    def forward(self, input):
         encoding = self.encoder(input)
-        output = self.generator(encoding.to('cuda:1'))
-        if reshape_output:
-            output = output.view(3, 32, 32)
+        output = self.generator(encoding.to('cpu'))
+        if len(input.shape) < 3:
+            output = output.view(3072, 1024)
+        else:
+            output = output.view(input.shape[0], 3072, 1024)
         return output
 
     def load_encoder_weights(self, filename):

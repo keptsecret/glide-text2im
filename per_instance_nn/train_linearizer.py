@@ -15,7 +15,6 @@ EPOCHS = 200
 learning_rate = 1e-4
 optimizer = th.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-8)
 scheduler = th.optim.lr_scheduler.StepLR(optimizer, 10, gamma=0.2)
-criterion = nn.MSELoss()
 
 th.autograd.set_detect_anomaly(True)
 
@@ -24,6 +23,16 @@ x = x[0]  # remove classifier-free guidance stack
 
 y = th.load("../brownie_variations_true_output.pt").to("cuda:1")
 y = y.flatten()
+
+def criterion(A, dxs, dys):
+    loss_fn = nn.MSELoss()
+
+    value = 0.0
+    for dx, dy in zip(dxs, dys):
+        pred_dy = th.matmul(A, dx)
+        value += loss_fn(pred_dy, dy)
+    
+    return value / dxs.shape[0]
 
 for epoch in range(EPOCHS):
     running_loss = 0.0
@@ -34,12 +43,12 @@ for epoch in range(EPOCHS):
         dx = th.load(f"../brownie_variations/brownie_variation{i}_pca.pt").to("cuda:0")
         dx = dx.T[:, None, :].repeat(1, 512, 1)
 
-        pred_dy = model(dx, reshape_output=False)
+        A_mat = model(x)
 
         new_y = th.load(f"../brownie_variations_outputs/brownie_variation{i}_pca_output.pt").to("cuda:1")
         dy = new_y - y
 
-        loss = criterion(pred_dy, dy)
+        loss = criterion(A_mat, dx.to('cpu'), dy.to('cpu'))
         loss.backward()
 
         optimizer.step()
