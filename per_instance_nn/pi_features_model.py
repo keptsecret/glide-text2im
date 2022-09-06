@@ -22,7 +22,7 @@ class Encoder(nn.Module):
 
     def forward(self, input):
         start_dim = 1
-        if len(input.shape) == 2:
+        if len(input.shape) < 3:
             start_dim = 0
 
         x = th.flatten(input, start_dim=start_dim)
