@@ -102,7 +102,7 @@ class PerInstanceLinearizer(nn.Module):
                         nn.Conv2d(256, 512, 3, padding='same', bias=False),
                         nn.BatchNorm1d(512),
                         nn.ReLU(),
-                        nn.Conv2d(512, 512, 3, padding='same', stride=2, bias=False),
+                        nn.Conv2d(512, 512, 3, stride=2, bias=False),
                         nn.ReLU(),
                         nn.Conv2d(512, 1024, 3, padding='same', bias=False),
                         nn.BatchNorm1d(1024),
@@ -110,7 +110,7 @@ class PerInstanceLinearizer(nn.Module):
                         nn.Conv2d(1024, 1024, 3, padding='same', bias=False),
                         nn.BatchNorm1d(1024),
                         nn.ReLU(),
-                        nn.Conv2d(1024, 2048, 3, padding='same', stride=2, bias=False),
+                        nn.Conv2d(1024, 2048, 3, stride=2, bias=False),
                         nn.ReLU(),
                         nn.Conv2d(2048, 3072, 3, padding='same', bias=False)]
 
@@ -120,6 +120,7 @@ class PerInstanceLinearizer(nn.Module):
         encoding = self.encoder(input)
         print(encoding.shape)
         output = self.generator(encoding.view(encoding.shape[0], 32, 32).to('cuda:1'))
+        print(output.shape)
         if len(input.shape) < 3:
             output = output.view(3072, 1024)
         else:
