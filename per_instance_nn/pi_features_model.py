@@ -76,25 +76,50 @@ class PerInstanceLinearizer(nn.Module):
         #             nn.ReLU(),
         #             nn.Linear(2048, 3072, bias=False)]
 
-        generate_layers = [nn.Linear(1024, 4096, bias=False),
-                    nn.ReLU(),
-                    nn.Linear(4096, 16000, bias=False),
-                    nn.ReLU(),
-                    nn.Linear(16000, 64000, bias=False),
-                    nn.ReLU(),
-                    nn.Linear(64000, 128000, bias=False),
-                    nn.ReLU(),
-                    nn.Linear(128000, 512000, bias=False),
-                    nn.ReLU(),
-                    nn.Linear(512000, 1024000, bias=False),
-                    nn.ReLU(),
-                    nn.Linear(1024000, 3145728, bias=False)]
+        # input = 1x1024
+        generate_layers = [nn.Conv2d(1, 8, 3, padding='same', bias=False),
+                        nn.BatchNorm1d(),
+                        nn.ReLU(),
+                        nn.Conv2d(8, 16, 3, padding='same', bias=False),
+                        nn.BatchNorm1d(),
+                        nn.ReLU(),
+                        # upsampling block
+                        nn.Conv2d(16, 64, 3, padding='same', bias=False),
+                        nn.BatchNorm1d(),
+                        nn.ReLU(),
+                        nn.Upsample(scale_factor=2, mode='nearest'),
+                        nn.Conv2d(64, 128, 3, padding='same', bias=False),
+                        nn.ReLU(),
+                        nn.Conv2d(128, 256, 3, padding='same', bias=False),
+                        nn.ReLU(),
+                        nn.Conv2d(256, 256, 3, padding='same', bias=False),
+                        nn.ReLU(),
+                        nn.Upsample(scale_factor=2, mode='nearest'),
+                        # de-coding/downsampling block
+                        nn.Conv2d(256, 256, 3, padding='same', bias=False),
+                        nn.BatchNorm1d(),
+                        nn.ReLU(),
+                        nn.Conv2d(256, 512, 3, padding='same', bias=False),
+                        nn.BatchNorm1d(),
+                        nn.ReLU(),
+                        nn.Conv2d(512, 512, 3, padding='same', stride=2, bias=False),
+                        nn.ReLU(),
+                        nn.Conv2d(512, 1024, 3, padding='same', bias=False),
+                        nn.BatchNorm1d(),
+                        nn.ReLU(),
+                        nn.Conv2d(1024, 1024, 3, padding='same', bias=False),
+                        nn.BatchNorm1d(),
+                        nn.ReLU(),
+                        nn.Conv2d(1024, 2048, 3, padding='same', stride=2, bias=False),
+                        nn.ReLU(),
+                        nn.Conv2d(2048, 3072, 3, padding='same', bias=False)]
 
         self.generator = nn.Sequential(*generate_layers).to('cpu')
 
     def forward(self, input):
         encoding = self.encoder(input)
-        output = self.generator(encoding.to('cpu'))
+        print(encoding.shape)
+        output = self.generator(encoding.view(encoding.shape[0], 32, 32).to('cpu'))
         if len(input.shape) < 3:
             output = output.view(3072, 1024)
         else:
