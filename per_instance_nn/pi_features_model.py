@@ -89,10 +89,16 @@ class PerInstanceLinearizer(nn.Module):
                         nn.ReLU(),
                         nn.Upsample(scale_factor=2, mode='nearest'),
                         nn.Conv2d(64, 128, 3, padding='same', bias=False),
+                        nn.BatchNorm2d(128),
+                        nn.ReLU(),
+                        nn.Conv2d(128, 128, 3, padding='same', bias=False),
+                        nn.BatchNorm2d(128),
                         nn.ReLU(),
                         nn.Conv2d(128, 256, 3, padding='same', bias=False),
+                        nn.BatchNorm2d(256),
                         nn.ReLU(),
                         nn.Conv2d(256, 256, 3, padding='same', bias=False),
+                        nn.BatchNorm2d(256),
                         nn.ReLU(),
                         nn.Upsample(scale_factor=2, mode='nearest'),
                         # de-coding/downsampling block
@@ -116,6 +122,10 @@ class PerInstanceLinearizer(nn.Module):
                         nn.BatchNorm2d(2048),
                         nn.ReLU(),
                         nn.MaxPool2d(2),
+                        nn.Conv2d(2048, 2048, 3, padding='same', bias=False),
+                        nn.BatchNorm2d(2048),
+                        nn.ReLU(),
+                        nn.MaxPool2d(2),
                         nn.Conv2d(2048, 3072, 3, padding='same', bias=False)]
 
         self.generator = nn.Sequential(*generate_layers).to('cuda:1')
@@ -132,7 +142,7 @@ class PerInstanceLinearizer(nn.Module):
             output = output.view(3072, 1024)
         else:
             output = output.view(input.shape[0], 3072, 1024)
-        return output
+        return th.clamp(output, -1, 1)
 
     def load_encoder_weights(self, filename):
         self.encoder.load_state_dict(th.load(filename))
