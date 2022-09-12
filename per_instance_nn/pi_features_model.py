@@ -125,7 +125,6 @@ class PerInstanceLinearizer(nn.Module):
                         nn.Conv2d(2048, 2048, 3, padding='same', bias=False),
                         nn.BatchNorm2d(2048),
                         nn.ReLU(),
-                        nn.MaxPool2d(2),
                         nn.Conv2d(2048, 3072, 3, padding='same', bias=False)]
 
         self.generator = nn.Sequential(*generate_layers).to('cuda:1')
