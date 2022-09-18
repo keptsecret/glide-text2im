@@ -1,7 +1,7 @@
 import torch as th
 import torch.nn as nn
 
-from pi_features_model import PerInstanceLinearizer
+from pi_features_model import PerInstanceLinearizerV2 as PerInstanceLinearizer
 
 # device = 'cuda' if th.cuda.is_available() else 'cpu'
 # device = 'cpu'

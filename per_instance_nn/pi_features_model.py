@@ -108,16 +108,6 @@ class PerInstanceLinearizer(nn.Module):
         for param in self.encoder.parameters():
             param.requires_grad = False
 
-        # generate_layers = [nn.Linear(1024, 512),
-        #             nn.ReLU(),
-        #             nn.Linear(512, 512),
-        #             nn.ReLU(),
-        #             nn.Linear(512, 1024, bias=False),
-        #             nn.ReLU(),
-        #             nn.Linear(1024, 2048, bias=False),
-        #             nn.ReLU(),
-        #             nn.Linear(2048, 3072, bias=False)]
-
         # input = 1x1024
         generate_layers = [nn.Conv2d(1, 8, 3, padding='same', bias=False),
                         nn.BatchNorm2d(8),
@@ -183,6 +173,67 @@ class PerInstanceLinearizer(nn.Module):
             output = output.view(3072, 1024)
         else:
             output = output.view(input.shape[0], 3072, 1024)
+        return th.clamp(output, -1, 1)
+
+    def load_encoder_weights(self, filename):
+        self.encoder.load_state_dict(th.load(filename))
+
+class PerInstanceLinearizerV2(nn.Module):
+    def __init__(self) -> None:
+        super(PerInstanceLinearizer, self).__init__()
+
+        self.encoder = BetterEncoder().to('cuda:0')
+        for param in self.encoder.parameters():
+            param.requires_grad = False
+
+        # input = 1x1x128x8
+        conv_layers = [nn.Conv2d(1, 8, 3, padding='same'),
+                        nn.BatchNorm2d(8),
+                        nn.ReLU(),
+                        nn.Conv2d(8, 16, 3, padding='same'),
+                        nn.BatchNorm2d(16),
+                        nn.ReLU(),
+                        nn.Upsample(scale_factor=2, mode='nearest'),
+                        nn.Conv2d(16, 32, 3, padding='same'),
+                        nn.BatchNorm2d(32),
+                        nn.ReLU(),
+                        nn.Upsample(scale_factor=3, mode='nearest'),
+                        nn.Conv2d(32, 32, 3, padding='same'),
+                        nn.BatchNorm2d(32),
+                        nn.ReLU(),
+                        nn.Upsample(scale_factor=4, mode='nearest'),
+                        nn.Conv2d(32, 64, 3, padding='same'),
+                        nn.BatchNorm2d(64),
+                        nn.ReLU(),
+                        nn.Conv2d(64, 32, 3, padding='same'),
+                        nn.BatchNorm2d(32),
+                        nn.ReLU(),
+                        nn.Conv2d(32, 8, 3, padding='same'),
+                        nn.BatchNorm2d(8),
+                        nn.ReLU(),
+                        nn.Conv2d(8, 1, 3, padding='same')]
+
+        # input = 3072x192
+        linear_layers = [nn.Linear(192, 400),
+                            nn.Tanh(),
+                            nn.Linear(400, 600),
+                            nn.Tanh(),
+                            nn.Linear(600, 800),
+                            nn.Tanh(),
+                            nn.Linear(800, 1024)]
+
+        self.conv = nn.Sequential(*conv_layers).to('cuda:1')
+        self.linear = nn.Sequential(*linear_layers).to('cuda:1')
+
+    def encode(self, input):
+        return self.encoder(input)
+
+    def forward(self, input):
+        encoding = self.encoder(input)
+        x = encoding[None, None, :]
+        x = self.conv(x.to('cuda:1'))
+        output = self.linear(x.view(3072, 192))
+
         return th.clamp(output, -1, 1)
 
     def load_encoder_weights(self, filename):
