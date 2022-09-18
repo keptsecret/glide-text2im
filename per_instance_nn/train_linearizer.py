@@ -9,13 +9,13 @@ from pi_features_model import PerInstanceLinearizer
 dtype = th.float32
 
 model = PerInstanceLinearizer()
-model.load_encoder_weights("pi_encoder_weights_x.pt")
+model.load_encoder_weights("pi_betterencoder_weights.pt")
 model = model.to(dtype=dtype)
 
-EPOCHS = 60
+EPOCHS = 40
 learning_rate = 2e-4
 optimizer = th.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-8)
-scheduler = th.optim.lr_scheduler.StepLR(optimizer, 15, gamma=0.5)
+scheduler = th.optim.lr_scheduler.StepLR(optimizer, 10, gamma=0.2)
 
 th.autograd.set_detect_anomaly(True)
 
@@ -31,7 +31,7 @@ def criterion(A, dxs, dys):
     value = 0.0
     for dx, dy in zip(dxs, dys):
         enc_dx = model.encode(dx) #.to('cuda:0'))
-        pred_dy = th.matmul(A, enc_dx) #.to('cpu'))
+        pred_dy = th.matmul(A, enc_dx.view(1024)) #.to('cpu'))
         value += loss_fn(pred_dy, dy)
 
     return value / dxs.shape[0]
@@ -60,5 +60,5 @@ for epoch in range(EPOCHS):
 
     print(f'\rEpoch: {epoch+1} - loss: {running_loss / 180:.5f}')
 
-th.save(model.state_dict(), "pi_linearizer_weights.pt")
+th.save(model.state_dict(), "pi_linearizer_weights_v2.pt")
 print('Training complete')

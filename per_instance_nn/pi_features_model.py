@@ -104,7 +104,7 @@ class PerInstanceLinearizer(nn.Module):
     def __init__(self) -> None:
         super(PerInstanceLinearizer, self).__init__()
 
-        self.encoder = Encoder().to('cuda:0')
+        self.encoder = BetterEncoder().to('cuda:0')
         for param in self.encoder.parameters():
             param.requires_grad = False
 
@@ -167,7 +167,6 @@ class PerInstanceLinearizer(nn.Module):
                         nn.Conv2d(2048, 2048, 3, padding='same', bias=False),
                         nn.BatchNorm2d(2048),
                         nn.ReLU(),
-                        nn.MaxPool2d(2),
                         nn.Conv2d(2048, 3072, 3, padding='same', bias=False)]
 
         self.generator = nn.Sequential(*generate_layers).to('cuda:1')
