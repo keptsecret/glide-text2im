@@ -3,18 +3,18 @@ import torch.nn as nn
 
 from pi_features_model import AE
 
-# device = 'cuda' if th.cuda.is_available() else 'cpu'
-device = 'cpu'
+device = 'cuda' if th.cuda.is_available() else 'cpu'
+# device = 'cpu'
 # device = 'cuda:0'
-dtype = th.float32
+dtype = th.float16
 
 autoencoder = AE()
 autoencoder = autoencoder.to(device, dtype=dtype)
 
-EPOCHS = 20
+EPOCHS = 5
 learning_rate = 1e-4
 optimizer = th.optim.Adam(autoencoder.parameters(), lr=learning_rate, weight_decay=1e-6)
-scheduler = th.optim.lr_scheduler.MultiStepLR(optimizer, [10], gamma=0.1) # doesn't work
+# scheduler = th.optim.lr_scheduler.MultiStepLR(optimizer, [10], gamma=0.1) # doesn't work
 criterion = nn.MSELoss()
 
 th.autograd.set_detect_anomaly(True)
@@ -22,7 +22,7 @@ th.autograd.set_detect_anomaly(True)
 for epoch in range(EPOCHS):
     running_loss = 0.0
 
-    for i in range(180):
+    for i in range(181):
         optimizer.zero_grad()
 
         if i == 180:
@@ -45,7 +45,7 @@ for epoch in range(EPOCHS):
         optimizer.step()
         running_loss += loss.item()
         print(f"\rIter: {i} - loss: {loss.item():.5f}", end='')
-    scheduler.step()
+    # scheduler.step()
 
     print(f'\rEpoch: {epoch+1} - loss: {running_loss / 180:.5f}')
 
