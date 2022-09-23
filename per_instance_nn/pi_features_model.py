@@ -180,7 +180,7 @@ class PerInstanceLinearizer(nn.Module):
 
 class PerInstanceLinearizerV2(nn.Module):
     def __init__(self) -> None:
-        super(PerInstanceLinearizer, self).__init__()
+        super(PerInstanceLinearizerV2, self).__init__()
 
         self.encoder = BetterEncoder().to('cuda:0')
         for param in self.encoder.parameters():
