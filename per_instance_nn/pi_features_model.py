@@ -234,7 +234,7 @@ class PerInstanceLinearizerV2(nn.Module):
         x = self.conv(x.to('cuda:1'))
         output = self.linear(x.view(3072, 192))
 
-        return th.clamp(output, -1, 1)
+        return output #th.clamp(output, -1, 1)
 
     def load_encoder_weights(self, filename):
         self.encoder.load_state_dict(th.load(filename))

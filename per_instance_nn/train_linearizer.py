@@ -12,10 +12,10 @@ model = PerInstanceLinearizer()
 model.load_encoder_weights("pi_betterencoder_weights.pt")
 model = model.to(dtype=dtype)
 
-EPOCHS = 60
+EPOCHS = 100
 learning_rate = 1e-3
 optimizer = th.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-8)
-scheduler = th.optim.lr_scheduler.StepLR(optimizer, 15, gamma=0.1)
+scheduler = th.optim.lr_scheduler.StepLR(optimizer, 20, gamma=0.2)
 
 th.autograd.set_detect_anomaly(True)
 
